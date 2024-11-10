@@ -1,0 +1,25 @@
+name: Build master branch
+
+on:
+  push:
+    branches:
+      - master  # Only trigger on pushes to the master branch
+    paths:
+      - '**'                # Trigger for any changes in the repository
+      - '!.github/**'       # Exclude changes to files in the .github folder
+      - '!*.yml'            # Exclude YAML files
+      - '!*.config'         # Exclude configuration files
+      - '!*.md'             # Exclude markdown files
+      - '.github/workflows/*.yml'  # Exclude changes to workflow YAML files
+
+permissions:
+  checks: write          # Permissions for writing checks, mainly for status updates in the repository
+
+concurrency:
+  group: master-build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml  # Reuse the build.yml workflow for the build job
+    secrets: inherit  # Inherit secrets from the parent workflow
