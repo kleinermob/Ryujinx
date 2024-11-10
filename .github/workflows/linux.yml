@@ -1,0 +1,53 @@
+name: Build job linux
+
+on:
+  workflow_call:
+
+env:
+  POWERSHELL_TELEMETRY_OPTOUT: 1
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  RYUJINX_BASE_VERSION: "1.2.0"
+  RELEASE: 0
+
+jobs:
+  build_linux_x64:
+    name: Build Linux x64
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout latest master branch
+        uses: actions/checkout@v4
+        with:
+          ref: master  # Ensures the latest master branch is checked out
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Overwrite csc problem matcher
+        run: echo "::add-matcher::.github/csc.json"
+
+      - name: Get git short hash
+        id: git_short_hash
+        run: echo "result=$(git rev-parse --short "${{ github.sha }}")" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Change config filename for Linux
+        run: sed -r --in-place 's/\%\%RYUJINX_CONFIG_FILE_NAME\%\%/PRConfig\.json/g;' src/Ryujinx.Common/ReleaseInformation.cs
+        shell: bash
+
+      - name: Build
+        run: dotnet build -c "Release" -p:Version="${{ env.RYUJINX_BASE_VERSION }}" -p:SourceRevisionId="${{ steps.git_short_hash.outputs.result }}" -p:ExtraDefineConstants=DISABLE_UPDATER
+
+      - name: Publish Ryujinx
+        run: dotnet publish -c "Release" -r linux-x64 -o ./publish -p:Version="${{ env.RYUJINX_BASE_VERSION }}" -p:DebugType=embedded -p:SourceRevisionId="${{ steps.git_short_hash.outputs.result }}" -p:ExtraDefineConstants=DISABLE_UPDATER src/Ryujinx --self-contained
+
+      - name: Set executable bit
+        run: chmod +x ./publish/Ryujinx ./publish/Ryujinx.sh
+        if: matrix.platform.os == 'ubuntu-latest'
+
+      - name: Upload Ryujinx artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ryujinx-Release-${{ env.RYUJINX_BASE_VERSION }}+${{ steps.git_short_hash.outputs.result }}-linux_x64
+          path: publish
