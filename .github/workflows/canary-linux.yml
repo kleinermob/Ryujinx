@@ -1,4 +1,4 @@
-name: Canary release job
+name: Canary release job linux only
 
 on:
   workflow_dispatch:
