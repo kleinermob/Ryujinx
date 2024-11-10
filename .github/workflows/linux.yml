@@ -1,7 +1,8 @@
 name: Build job linux
 
 on:
-  workflow_call:
+  workflow_call:   # Triggered by other workflows (can still be called by other workflows)
+  workflow_dispatch:  # Allows manual triggering from the GitHub UI
 
 env:
   POWERSHELL_TELEMETRY_OPTOUT: 1
